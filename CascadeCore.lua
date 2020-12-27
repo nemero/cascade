@@ -234,8 +234,8 @@ local COMBAT_EVENT_TYPES = {
 	DAMAGE_SHIELD_MISSED = "MISS",
 
 	-- Power events.
-	SPELL_ENERGIZE = "POWER",
-	SPELL_PERIODIC_ENERGIZE = "POWER", -- Judgement of Wisdom, Replenishment, Innervate, Divine Plea
+	SPELL_ENERGIZE = "POWER_ENERGIZE",
+	SPELL_PERIODIC_ENERGIZE = "POWER_ENERGIZE", -- Judgement of Wisdom, Replenishment, Innervate, Divine Plea
 	SPELL_LEECH = "POWER",
 	SPELL_PERIODIC_LEECH = "POWER", -- Drain Mana, Viper Sting
 	
@@ -318,8 +318,8 @@ end
 -------------------------------------------------------------------------------
 function Cascade:FilterCombatEvents()
 	if db.events.POWER then
-		COMBAT_EVENT_TYPES["SPELL_ENERGIZE"] = "POWER"
-		COMBAT_EVENT_TYPES["SPELL_PERIODIC_ENERGIZE"] = "POWER"
+		COMBAT_EVENT_TYPES["SPELL_ENERGIZE"] = "POWER_ENERGIZE"
+		COMBAT_EVENT_TYPES["SPELL_PERIODIC_ENERGIZE"] = "POWER_ENERGIZE"
 		COMBAT_EVENT_TYPES["SPELL_LEECH"] = "POWER"
 		COMBAT_EVENT_TYPES["SPELL_PERIODIC_LEECH"] = "POWER"
 		COMBAT_EVENT_TYPES["SPELL_DRAIN"] = "POWER"
@@ -398,14 +398,19 @@ end
 -------------------------------------------------------------------------------
 -- Parse combat log events.
 -------------------------------------------------------------------------------
-function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2, ...)
-	-- First, check if the event is one we should show.
+function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, ...)
+	Cascade:test(self, CombatLogGetCurrentEventInfo())
+end
+
+function Cascade:test(e, ...)
+	-- First, check if the event is one we should show.	
+	local timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2 = ...
 	if not COMBAT_EVENT_TYPES[event] then return end
 	
 	-- Check for reflect damage. Based on MSBT's reflect code.
 	local reflect
 	if sourceGUID == destGUID and event == "SPELL_DAMAGE" then
-		local id = ...
+		local id = select(12, ...)
 		if reflectTable[sourceGUID] == id then
 			-- Clear old reflect data.
 			reflectTable[sourceGUID] = nil
@@ -486,17 +491,17 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 	-- DAMAGE --
 	if eventType == "DAMAGE" then
 		if event == "SWING_DAMAGE" then
-			amount, overkill, school, resisted, blocked, absorbed, critical, glancing, crushing = ...
+			amount, overkill, school, resisted, blocked, absorbed, critical, glancing, crushing = select(12, ...)
 			if overkill > 0 then
 				messageClean = CombatLog_OnEvent(Blizzard_CombatLog_CurrentSettings, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2, amount, 0, school, resisted, blocked, absorbed, critical, glancing, crushing)
 			end
 		elseif event == "ENVIRONMENTAL_DAMAGE" then
-			environmentalType, amount, overkill, school, resisted, blocked, absorbed, critical, glancing, crushing = ...
+			environmentalType, amount, overkill, school, resisted, blocked, absorbed, critical, glancing, crushing = select(12, ...)
 			if overkill > 0 then
 				messageClean = CombatLog_OnEvent(Blizzard_CombatLog_CurrentSettings, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2, environmentalType, amount, 0, school, resisted, blocked, absorbed, critical, glancing, crushing)
 			end
 		else
-			spellID, spellName, spellSchool, amount, overkill, school, resisted, blocked, absorbed, critical, glancing, crushing = ...
+			spellID, spellName, spellSchool, amount, overkill, school, resisted, blocked, absorbed, critical, glancing, crushing = select(12, ...)
 			if overkill > 0 then
 				messageClean = CombatLog_OnEvent(Blizzard_CombatLog_CurrentSettings, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2, destFlags, spellID, spellName, spellSchool, amount, 0, school, resisted, blocked, absorbed, critical, glancing, crushing)
 			end
@@ -523,8 +528,7 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 	
 	-- HEALS --
 	elseif eventType == "HEAL" then
-		spellID, spellName, spellSchool, amount, overheal, absorbed, critical = ...
-		
+		spellID, spellName, spellSchool, amount, overheal, absorbed, critical = select(12, ...)
 		color = incoming and db.colors.incoming.heal or db.colors.outgoing.heal
 		
 		if outgoing and not petOut then
@@ -540,15 +544,16 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 			if db.events.OVERHEALING then
 				text = string_format(overhealFormat, amount - overheal, overheal)
 			end
-			messageClean = CombatLog_OnEvent(Blizzard_CombatLog_CurrentSettings, timestamp, event, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2, spellID, spellName, spellSchool, amount, 0, absorbed, critical)
+
+			messageClean = CombatLog_OnEvent(Blizzard_CombatLog_CurrentSettings, timestamp, event, hideCaster,	sourceGUID, sourceName, sourceFlags, sourceFlags2, 		destGUID,	destName, 	destFlags, 	destFlags2, 	spellID, spellName, spellSchool, amount, 0, absorbed, critical)
 		end
 	
 	-- MISSES --
 	elseif eventType == "MISS" then
 		if event == "SWING_MISSED" then
-			missType, amountMissed = ...
+			missType, amountMissed =select(12, ...)
 		else
-			spellID, spellName, spellSchool, missType, amountMissed = ...
+			spellID, spellName, spellSchool, missType, amountMissed = select(12, ...)
 		end
 
 		-- Store information about reflects.
@@ -576,27 +581,33 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 	-- POWER --
 	elseif eventType == "POWER" then
 		if not (playerIn or playerOut) then return end
-		-- spellID, spellName, spellSchool, amount, powerType, extraAmount = ...
-		spellID, spellName, spellSchool, amount, powerType = ...
+		spellID, spellName, spellSchool, amount, powerType = select(12, ...)
 		color = db.colors.incoming.power
-		
 		text = amount .. " " .. CombatLog_String_PowerType(powerType)
 		
-		if (event == "SPELL_ENERGIZE" or event == "SPELL_PERIODIC_ENERGIZE") then
-			if not playerIn then return end
+		if playerIn then
+			text = minusChar..text
+		elseif playerOut then
 			text = plusChar..text
-		else
-			if playerIn then
-				text = minusChar..text
-			elseif playerOut then
-				text = plusChar..text
-			end
+		end
+
+	-- POWER ENERGIZE --
+	elseif eventType == "POWER_ENERGIZE" then
+		if not (playerIn or playerOut) then return end
+		local overEnergize, alternatePowerType
+		spellID, spellName, spellSchool, amount, overEnergize, powerType, alternatePowerType = select(12, ...)
+		color = db.colors.incoming.power
+		text = amount .. " " .. CombatLog_String_PowerType(powerType, amount, alternatePowerType)
+		
+		if not playerIn then return end
+		if amount > 0 then
+			text = plusChar..text
 		end
 	
 	-- AURAS --
 	elseif eventType == "AURA_APPLIED" then
 		if not playerIn then return end
-		spellID, spellName, spellSchool, auraType = ...
+		spellID, spellName, spellSchool, auraType = select(12, ...)
 	
 		if auraType == "BUFF" then
 			if not db.events.BUFF_GAINS then return end
@@ -609,7 +620,7 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 		text = plusChar..abbreviate(spellName)
 	elseif eventType == "AURA_REMOVED" then
 		if not playerIn then return end
-		spellID, spellName, spellSchool, auraType = ...
+		spellID, spellName, spellSchool, auraType = select(12, ...)
 
 		if auraType == "BUFF" then
 			if not db.events.BUFF_FADES then return end
@@ -621,19 +632,19 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 		text = minusChar..abbreviate(spellName)
 	elseif eventType == "ENCHANT_APPLIED" then
 		if not playerIn then return end
-		text = ...
+		text = select(12, ...)
 		text = plusChar..abbreviate(string_gsub(text, "^[%+%-]", ""))
 		color = db.colors.incoming.buffs
 	elseif eventType == "ENCHANT_REMOVED" then
 		if not playerIn then return end
 
-		text = ...
+		text = select(12, ...)
 		text = minusChar..abbreviate(string_gsub(text, "^[%+%-]", ""))
 		color = db.colors.incoming.buffs
 	
 	-- DISPELS --
 	elseif eventType == "DISPEL" then
-		spellID, spellName, spellSchool = select(4, ...)
+		spellID, spellName, spellSchool = select(12, ...)
 
 		if spellID then
 			color = incoming and db.colors.incoming.spell or db.colors.outgoing.spell
@@ -643,7 +654,7 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 		
 		text = L.DISPELLED..abbreviate(spellName)
 	elseif eventType == "DISPEL_FAILED" then
-		spellID, spellName, spellSchool = select(4, ...)
+		spellID, spellName, spellSchool = select(12, ...)
 
 		color = incoming and db.colors.incoming.spell or db.colors.outgoing.spell
 		
@@ -651,8 +662,7 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 	
 	-- INTERRUPTS --
 	elseif eventType == "INTERRUPT" then
-		--spellID, spellName, spellSchool, extraSpellID, extraSpellName, extraSchool = ...
-		spellID, spellName, spellSchool, extraSpellID = ...
+		spellID, spellName, spellSchool, extraSpellID = select(12, ...)
 		color = db.colors.outgoing.spell
 		text = incoming and INTERRUPTED or INTERRUPT
 		if extraSpellID then spellID = extraSpellID end
@@ -680,7 +690,7 @@ function Cascade:COMBAT_LOG_EVENT_UNFILTERED(e, timestamp, event, hideCaster, so
 	if eventType == "DAMAGE" and incoming and not outgoing then text = minusChar..text end
 	if eventType == "HEAL" then text = plusChar..text end
 	
-	message = CombatLog_OnEvent(Blizzard_CombatLog_CurrentSettings, timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2, ...)
+	message = 	CombatLog_OnEvent(Blizzard_CombatLog_CurrentSettings, 	timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, 	destGUID, destName, destFlags, destFlags2, select(12, ...))
 
 	-- History Tracking
 	if db.trackHistory and history and (eventType == "DAMAGE" or eventType == "HEAL") and (playerIn or playerOut) then
