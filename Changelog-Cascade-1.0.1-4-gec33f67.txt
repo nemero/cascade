@@ -1,0 +1,5 @@
+Turkleton:
+	- Remove database cleaning code
+	- Fix drain events not being filtered correctly
+	- Optimize scrolling code
+	- Fix bug for non-english locales
