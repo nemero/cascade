@@ -93,7 +93,8 @@ function getEventFrame()
 	local f = tremove(frameCache)
 	if f then return f end
 	
-	f = CreateFrame("Frame", nil, frame)
+	-- f = CreateFrame("Frame", nil, frame)
+	f = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
 	f:EnableMouse(true)
 	f:RegisterForDrag("LeftButton")
 	f:SetBackdrop(highlight)

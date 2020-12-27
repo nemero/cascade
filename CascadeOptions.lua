@@ -870,8 +870,11 @@ function mod:Test()
 	local spell = spells[math.random(1, #spells)]
 	local name, rank, icon = GetSpellInfo(spell)
 	local spellLink = GetSpellLink(name)
-	local spellID = select(3, string.find(spellLink, "|Hspell:(%d+).-|h.-|h"))
-	local color = colors[math.random(1, #colors)]
-	local loc = math.random(-2, 2)
-	Cascade:DisplayEvent(loc == 0 and name or math.random(100, 10000), loc, color.r, color.g, color.b, icon, spellID, name)
+	
+	if spellLink ~= nil then
+		local spellID = select(3, string.find(spellLink, "|Hspell:(%d+).-|h.-|h"))
+		local color = colors[math.random(1, #colors)]
+		local loc = math.random(-2, 2)
+		Cascade:DisplayEvent(loc == 0 and name or math.random(100, 10000), loc, color.r, color.g, color.b, icon, spellID, name)
+	end
 end

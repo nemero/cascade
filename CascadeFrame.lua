@@ -130,7 +130,8 @@ function Cascade:CreateFrame()
 	
 	if not frame then
 		-- Create our frame.
-		frame = CreateFrame("Frame", "CascadeFrame", UIParent)
+		-- frame = CreateFrame("Frame", "CascadeFrame", UIParent) -- changed in 9.0
+		frame = CreateFrame("Frame", "CascadeFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 		frame.totalEvents = 0
 		self.Frame = frame
 		
@@ -155,7 +156,7 @@ function Cascade:CreateFrame()
 		frame:SetMaxResize(800, 1200)
 
 		-- Create the resize grip
-		local grip = CreateFrame("Frame", nil, frame)
+		local grip = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate") -- CreateFrame("Frame", nil, frame)
 		frame.grip = grip
 		grip:SetFrameLevel(frame:GetFrameLevel() + 10)
 		grip:SetHeight(16)

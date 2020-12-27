@@ -61,7 +61,8 @@ function history:CreateFrame()
 	db = self.HISTORY
 	
 	-- Create our frame.
-	frame = CreateFrame("Frame", "CascadeHistoryFrame", UIParent)
+	-- frame = CreateFrame("Frame", "CascadeHistoryFrame", UIParent)
+	frame = CreateFrame("Frame", "CascadeHistoryFrame", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 	tinsert(UISpecialFrames, frame:GetName())
 	self.Frame = frame
 
@@ -89,16 +90,15 @@ function history:CreateFrame()
 	frame:EnableMouseWheel(true)
 	frame:SetMovable(true)
 	frame:SetResizable(true)
-	frame:SetScript("OnSizeChanged", function(self) history:CreateEventFrames() end)
-	frame:SetScript("OnMouseWheel", onMouseWheel)
-	
+
 	-- Background
 	backdrop = Cascade.backdrop
 	frame:SetBackdrop(backdrop)
 	frame:SetMaxResize(800, 1200)
 	
 	-- Top anchor
-	local anchor = CreateFrame("Frame", nil, frame)
+	-- local anchor = CreateFrame("Frame", nil, frame)
+	local anchor = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
 	frame.anchor = anchor
 	anchor:SetMovable(true)
 	anchor:EnableMouse(true)
@@ -116,6 +116,9 @@ function history:CreateFrame()
 	anchor.text:SetPoint("CENTER")
 	anchor:SetBackdrop(anchorBackdrop)
 	anchor:SetBackdropColor(0, 0, 0, .5)
+
+	frame:SetScript("OnSizeChanged", function(self) history:CreateEventFrames() end)
+	frame:SetScript("OnMouseWheel", onMouseWheel)
 
 	-- Close button
 	local close = CreateFrame("Button", nil, frame.anchor, "UIPanelCloseButton")
@@ -225,7 +228,7 @@ local keyOnEnter = function(self)
 end
 
 createKeyButton = function(anchor, key, texture, ...)
-	local button = CreateFrame("Button", nil, anchor or frame)
+	local button = CreateFrame("Button", nil, anchor or frame, BackdropTemplateMixin and "BackdropTemplate")
 	frame[key] = button
 	button.key = key
 	button:SetHeight(24)
@@ -524,7 +527,8 @@ function getEventFrame()
 	local f = tremove(frameCache)
 	if f then return f end
 	
-	f = CreateFrame("Frame", nil, frame)
+	-- f = CreateFrame("Frame", nil, frame)
+	f = CreateFrame("Frame", nil, frame, BackdropTemplateMixin and "BackdropTemplate")
 	f:EnableMouse(true)
 	f:RegisterForDrag("LeftButton")
 	f:SetBackdrop(highlight)

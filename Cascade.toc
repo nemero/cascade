@@ -6,7 +6,7 @@
 
 ## Title: Cascade
 ## Notes: Compact Combat Log Addon
-## Author: Turkleton
+## Author: Turkleton, updated by MaxF
 ## Version: 1.0.1
 ## X-Category: Combat
 ## X-Credits: Grayhoof, Mikord
